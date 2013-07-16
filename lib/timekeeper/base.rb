@@ -9,8 +9,26 @@ module Timekeeper
             bootstrap
         end
 
-        def start task_id=nil, project_id=:active
-            Task.create task_group: TaskGroup.active
+        def start task_name = nil, task_group_name = nil
+
+            task = Task.find_by name: task_name
+
+            if task.nil?
+
+                if task_group_name.nil?
+                    task_group = TaskGroup.default
+                else
+                    task_group = TaskGroup.find_by name: task_group_name || TaskGroup.default
+                end
+                
+                task = Task.create name: task_name, task_group: task_group
+                
+            end
+
+            # TODO: start logging time
+
+            return task
+
         end
 
         def stop
@@ -27,11 +45,11 @@ module Timekeeper
             TaskGroup.create name: group_name
         end
 
-        def activate_group group_id
+        def default_group group_name
             TaskGroup.transaction do
-                TaskGroup.update_all active: false
-                task_group = TaskGroup.find group_id
-                task_group.active = true
+                TaskGroup.update_all default: false
+                task_group = TaskGroup.find_by name: group_name
+                task_group.default = true
                 task_group.save
             end
         end
@@ -58,7 +76,7 @@ module Timekeeper
                 
                 create_table :task_groups do |t|
                     t.string :name
-                    t.boolean :active, default: false
+                    t.boolean :default, default: false
                 end
 
                 create_table :tasks do |t|
